@@ -15,6 +15,8 @@ Understanding how specific attributes like cocoa content affect product ratings 
    ```
 4. Knit the R Markdown file to HTML or PDF to view the full analysis and outputs.
 
+## R Pubs Link https://rpubs.com/Shreya282001/1177035
+
 ## Where to Get Help
 If you encounter any issues running the code or understanding the outputs, feel free to:
 - Open an issue on the repository
