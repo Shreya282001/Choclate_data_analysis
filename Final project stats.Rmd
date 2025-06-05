@@ -1,0 +1,330 @@
+---
+title: "Final project"
+author: "Final Project"
+date: "2024-04-22"
+output: html_document
+---
+
+```{r}
+data <- read.csv("C:\\Users\\SHREYA\\OneDrive\\Documents\\Gitstuff\\modified_dataset.csv")
+```
+
+```{r}
+library(ggthemes)
+library(ggrepel)
+library(AmesHousing)
+library(boot)
+library(broom)
+library(lindia)
+library(ggplot2)
+```
+
+```{r}
+summary(data)
+head(data )
+```
+
+**1) Rating vs cocoa_percent\
+**We could investigate whether there's a correlation between the cocoa percentage in chocolate and the rating given in the review. This analysis could provide insight into whether higher cocoa percentages generally lead to higher ratings, or if there's an optimal percentage range for better reviews.
+
+```{r}
+library(dplyr)
+
+# Filter relevant columns
+relevant_data <- data %>%
+  select(cocoa_percent, rating)
+
+# Calculate correlation coefficient
+correlation <- cor(relevant_data$cocoa_percent, relevant_data$rating)
+
+# Print correlation coefficient
+print(paste("Correlation coefficient:", correlation))
+
+```
+
+The correlation coefficient of approximately -0.147 suggests a weak negative correlation between cocoa percentage and rating. This means that as cocoa percentage increases, the rating tends to slightly decrease, but the relationship is not very strong.
+
+### **Visualization**
+
+```{r}
+library(ggplot2)
+
+# Create a scatter plot
+ggplot(data, aes(x = cocoa_percent, y = rating)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +  # Add linear regression line
+  labs(title = "Relationship between Cocoa Percentage and Rating",
+       x = "Cocoa Percentage",
+       y = "Rating")
+
+```
+
+**Data Point Distribution:** The data points in the scatter plot appear to be somewhat spread out, indicating a wider range of both cocoa percentages and ratings. This suggests there might not be an extremely strong linear relationship between the two variables.
+
+**Regression Line:**
+
+The blue regression line in the plot has a very slight negative slope. This suggests a very weak tendency for higher cocoa percentage to be associated with slightly lower ratings. However, the spread of the data points around the line indicates that this is not a definitive trend, and there are many exceptions.
+
+Overall, the data suggests no strong linear relationship between cocoa percentage and rating in this data set. While there might be a very slight negative association according to the regression line, the data points are scattered, and the strength of this association is likely weak.
+
+### **2) Regional Variations in Chocolate Characteristics**
+
+We could analyze how chocolate characteristics vary based on the specific bean origin or country of origin. This could involve comparing the most memorable characteristics mentioned in reviews across different regions to identify any patterns or preferences.
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Data Preparation
+relevant_data <- data %>%
+  select(country_of_bean_origin, most_memorable_characteristics)
+
+# Characteristics Extraction (Assuming characteristics are separated by commas)
+relevant_data$most_memorable_characteristics <- strsplit(as.character(relevant_data$most_memorable_characteristics), ",\\s*")
+
+# Unnest the characteristics into separate rows
+unnested_data <- unnest(relevant_data, most_memorable_characteristics)
+
+# Aggregation by country of bean origin
+aggregated_data <- unnested_data %>%
+  group_by(country_of_bean_origin, most_memorable_characteristics) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  arrange(country_of_bean_origin, desc(count))
+
+
+
+```
+
+```{r}
+# Filter out less common characteristics 
+aggregated_data <- aggregated_data %>%
+  filter(count > 10)  # Adjust threshold as needed
+
+# Reorder bars within each facet based on frequency
+aggregated_data <- aggregated_data %>%
+  group_by(country_of_bean_origin) %>%
+  mutate(most_memorable_characteristics = reorder(most_memorable_characteristics, count))
+
+# Visualization
+ggplot(aggregated_data, aes(x = most_memorable_characteristics, y = count, fill = country_of_bean_origin)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ country_of_bean_origin, scales = "free_y", ncol = 2) +
+  labs(title = "Most Memorable Characteristics of Chocolates by Country of Bean Origin",
+       x = "Most Memorable Characteristics",
+       y = "Frequency",
+       fill = "Country of Bean Origin") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  
+```
+
+**Dominant Characteristics by Country:**
+
+**Ecuador:** The most frequent characteristic associated with Ecuadorian chocolate is "fruity," followed by "floral" and "acidic." This suggests that Ecuadorean chocolates are often known for their bright and tangy flavors. **Dominican Republic:** The most common characteristic for Dominican Republic chocolate is "nutty," followed by "bourbon" and "earthy." This indicates that chocolates from this origin are likely known for their smooth texture and nutty taste profile. **Madagascar:** For Madagascar, the dominant characteristic is "fruity," followed by "smoke" and "sandy." Similar to Ecuador, Malagasy chocolates seem to be recognized for their fruity notes, but also for complexity in flavor. **Peru:** "Fruity" is also the most frequent characteristic for peru chocolate, followed by "cocoa." This suggests peru chocolates are known for their prominent fruit flavors alongside a strong chocolate taste.
+
+### **3) Temporal Trends**
+
+We could examine how chocolate preferences and ratings have evolved over time by analyzing reviews from different years. This could involve identifying any trends or shifts in consumer preferences, such as changes in preferred cocoa percentages or flavor profiles.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Data Preparation
+relevant_data <-data %>%
+  select(review_date, cocoa_percent, rating)
+
+# Convert review_date to numeric year
+relevant_data$review_year <- as.numeric(as.character(relevant_data$review_date))
+
+# Aggregation by review year
+aggregated_data <- relevant_data %>%
+  group_by(review_year) %>%
+  summarise(mean_cocoa_percent = mean(cocoa_percent, na.rm = TRUE),
+            mean_rating = mean(rating, na.rm = TRUE))
+
+# Visualization (Line plot)
+ggplot(aggregated_data, aes(x = review_year)) +
+  geom_line(aes(y = mean_cocoa_percent, color = "Mean Cocoa Percentage")) +
+  geom_line(aes(y = mean_rating, color = "Mean Rating")) +
+  labs(title = "Temporal Trends in Chocolate Preferences and Ratings",
+       x = "Review Year",
+       y = "Mean Value",
+       color = "Variable") +
+  scale_color_manual(values = c("Mean Cocoa Percentage" = "blue", "Mean Rating" = "red")) +
+  theme_minimal()
+
+```
+
+**Cocoa Percentage Trend:**
+
+-   The blue line representing the mean cocoa percentage does fluctuate somewhat, but there's no clear upward or downward trend over the review years. It's difficult to discern a consistent increase in average cocoa percentage.
+
+**Rating Trend:**
+
+-   The red line representing the mean rating also fluctuates, and there's no clear positive or negative trend. It seems to be relatively flat or with minor variations around a central value.
+
+**Relationship Between Trends:**
+
+-   Given the absence of clear trends in both cocoa percentage and rating, it's difficult to establish a definitive relationship between them.
+
+**Possible Explanations:**
+
+-   Consumer preferences for cocoa percentage might vary depending on other chocolate characteristics or individual taste. Some might prefer higher cocoa percentages for a more intense chocolate experience, while others might enjoy milkier chocolates regardless of cocoa content.
+
+-   Chocolate manufacturers might be offering a wider variety of chocolates with different cocoa percentages and taste profiles to cater to diverse preferences. This could explain the fluctuations in both cocoa percentage and rating without a clear correlation.
+
+**Additional Considerations:**
+
+-   As mentioned before, the specific range of years and more data points would be valuable for a more robust analysis.
+
+-   It might be helpful to explore if there are subgroups within the data (e.g., by chocolate type, origin, or brand) that exhibit different trends. This could reveal more specific patterns in consumer preferences.
+
+**Overall, the visualization suggests that there might not be a simple relationship between cocoa percentage and rating in this data set.** Both factors seem to fluctuate independently, possibly reflecting the diverse preferences of chocolate consumers and the variety of chocolate products available.
+
+### **Hypothesis Testing**
+
+**Null Hypothesis:** There is no difference in the mean ratings of chocolate bars with a cocoa percentage above 70% and those with a cocoa percentage below or equal to 70%. **Alternative Hypothesis:** There is a difference in the mean ratings of chocolate bars with a cocoa percentage above 70% and those with a cocoa percentage below or equal to 70%.
+
+For this hypothesis, we will use a two-sample t-test to compare the mean ratings of chocolate bars with a cocoa percentage above 70% and those with a cocoa percentage below or equal to 70%.
+
+#### **Neyman-Pearson Framework:**
+
+-   Test: Two-sample t-test
+
+-   Alpha level: 0.05
+
+-   Power level : 0.2 (power = 0.8)
+
+```{r}
+# Subset the data into two groups based on cocoa percentage
+above_70 <- data[data$cocoa_percent > 0.7, ]
+below_or_equal_70 <-data[data$cocoa_percent <= 0.7, ]
+
+# Perform two-sample t-test
+t_test_result <- t.test(above_70$rating, below_or_equal_70$rating)
+
+# Print the result
+print(t_test_result)
+```
+
+1.  The test statistic (t) is -6.2712.
+
+2.  The degrees of freedom (df) are approximately 2257.1.
+
+3.  The p-value is very small (4.279e-10), indicating strong evidence against the null hypothesis.
+
+4.  The 95% confidence interval for the difference in means ranges from -0.1475 to -0.0772.
+
+5.  The sample mean rating for chocolate bars with a cocoa percentage above 70% is approximately 3.133.
+
+6.  The sample mean rating for chocolate bars with a cocoa percentage below or equal to 70% is approximately 3.245. Since the p-value is less than the chosen significance level (alpha = 0.05), we reject the null hypothesis and conclude that there is a statistically significant difference in mean ratings between the two groups. Additionally, the negative t-value indicates that the mean rating for chocolate bars with a cocoa percentage above 70% is significantly lower than that for bars with a cocoa percentage below or equal to 70%.
+
+### **Visualization to illustrate the results of hypothesis**
+
+```{r}
+# Create a box plot with color
+ggplot(data = data, aes(x = factor(cocoa_percent > 0.7), y = rating, fill = factor(cocoa_percent > 0.7))) +
+  geom_boxplot(fill = c("lightblue", "lightgreen")) +
+  labs(x = "Cocoa Percentage (Above 70%)", y = "Rating", fill = "Cocoa Percentage") +
+  theme_minimal() +
+  geom_hline(yintercept = t_test_result$conf.int[1], linetype = "dashed", color = "red") +
+  geom_hline(yintercept = t_test_result$conf.int[2], linetype = "dashed", color = "red") +
+  ggtitle("Comparison of Ratings for Chocolate Bars") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+1.  The x-axis represents whether the cocoa percentage is above 70% or below/equal to 70%.
+
+2.  The y-axis represents the rating of chocolate bars.
+
+3.  The box plots show the distribution of ratings for each group.
+
+4.  The dashed red lines represent the 95% confidence interval for the difference in means.
+
+5.  Bars colored in light blue represent chocolate bars with a cocoa percentage below or equal to 70%, and bars colored in light green represent bars with a cocoa percentage above 70%.
+
+### **Linear regression**
+
+```{r}
+# Build the linear regression model
+model <- lm(rating ~ cocoa_percent, data = data)
+
+summary(model)
+```
+
+The projected rating when cocoa_percent is 0 is shown by the intercept, which is 4.0295. Nevertheless, this intercept might not have a useful interpretation in this situation because cocoa_percent cannot be less than 0. -Cocoa_percent has a coefficient of -1.1630. This indicates that we anticipate a rating loss of about 1.1630 units for every unit rise in cocoa_percent. -Because the cocoa_percent intercept and coefficient are both statistically significant, it is improbable that they will be zero.
+
+### Extended Linear Model
+
+```{r}
+
+# Build the extended linear regression model
+model_extended <- lm(rating ~ cocoa_percent  + review_date + ingredients, data = data)
+
+#summary 
+summary(model_extended)
+
+```
+
+## 
+Model Diagnosis
+
+```{r}
+gg_resfitted(model_extended) +
+  geom_smooth(se=FALSE)
+```
+
+```{r}
+residual_plots <- gg_resX(model_extended)
+```
+
+```{r}
+gg_reshist(model_extended)
+```
+
+```{r}
+gg_qqplot(model_extended)
+```
+
+```{r}
+plot(cooks.distance(model_extended))
+```
+
+### **Conclusions and Practical scenario recommendations**
+
+#### **Rating vs cocoa_percent**
+
+-   The analysis reveals a weak negative correlation between cocoa percentage and chocolate ratings, suggesting that higher cocoa percentages do not consistently lead to higher ratings in reviews.
+
+-   Chocolate manufacturers should not solely rely on increasing cocoa percentage to improve ratings, as other factors may also influence consumer preferences.
+
+    #### **Regional Variations in Chocolate Characteristics**
+
+-   Based on the visualization, fruits appear to be a dominant characteristic across chocolates from Ecuador, Madagascar, and peru, potentially suggesting a preference for fruity notes in chocolates from these regions.
+
+-   Manufacturers sourcing beans from regions like Ecuador, Madagascar, and Peru may consider incorporating fruity notes into their chocolate products to cater to potential regional preferences.
+
+#### **Temporal Trends**
+
+-   Based on the visualization, there is no clear trend between cocoa percentage and rating, suggesting consumer preferences for these factors may be varied.
+
+-   The lack of a clear trend between cocoa percentage and rating suggests that consumer preferences for these factors may vary over time. Continuous monitoring and adaptation to changing consumer preferences are recommended.
+
+#### **Hypothesis Testing**
+
+-   The statistical analysis indicates a significant difference in mean ratings between chocolate bars with cocoa percentages above and below 70%, with bars containing higher cocoa percentages receiving lower ratings on average.
+
+-   Chocolate bars with cocoa percentages above and below 70% may cater to different consumer segments, and manufacturers should consider diversifying their product offerings to accommodate these preferences.
+
+#### **Linear regression**
+
+-   The linear regression analysis suggests that as cocoa percentage increases, the anticipated chocolate rating decreases, with both the intercept and coefficient being statistically significant.
+
+-   Manufacturers can anticipate a decrease in chocolate ratings as cocoa percentage increases, highlighting the importance of balancing cocoa percentage with other flavor and texture factors.
+
+    #### Extended Linear Model
+
+    In conclusion, cocoa percentage and certain ingredient combinations appear to be significant predictors of the product rating, while the review date has a relatively weaker association. However, the model only explains a small portion of the variability in the rating, suggesting that other factors not included in the model may also play a role.
+
+    In practical scenarios, chocolate manufacturers should conduct thorough market research to understand consumer preferences in different regions and time periods. They should also consider diversifying their product offerings to cater to varying consumer preferences regarding cocoa percentage and flavor profiles. Additionally, ongoing experimentation and innovation are essential to meet evolving consumer tastes and preferences in the chocolate industry.
